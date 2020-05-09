@@ -1,13 +1,12 @@
 package com.github.rubenqba.inegi.service.impl;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rubenqba.inegi.domain.LocaltyScope;
-import com.github.rubenqba.inegi.domain.MxLocalty;
+import com.github.rubenqba.inegi.domain.MxLocality;
 import com.github.rubenqba.inegi.domain.MxRegion;
 import com.github.rubenqba.inegi.domain.MxState;
 import com.github.rubenqba.inegi.service.InegiService;
@@ -29,7 +28,7 @@ public class InegiServiceImpl implements InegiService {
 
     private static final Function<InegiState, MxState> stateDomainMapper = (dto) -> new MxState(dto.getCveAgee(), dto.getNomAbrev(), dto.getNomAbrev());
     private static final Function<InegiMunicipio, MxRegion> regionDomainMapper = (dto) -> new MxRegion(dto.municipaly, dto.state, dto.name, dto.principalCity);
-    private static final Function<InegiLocalidad, MxLocalty> localtyDomainMapper = (dto) -> new MxLocalty(dto.localty, dto.state, dto.municipal, dto.name, LocaltyScope.valueOf(dto.ambito), dto.latitud, dto.longitud, dto.altitud);
+    private static final Function<InegiLocalidad, MxLocality> localtyDomainMapper = (dto) -> new MxLocality(dto.localty, dto.state, dto.municipal, dto.name, LocaltyScope.valueOf(dto.ambito), dto.latitud, dto.longitud, dto.altitud);
 
     private final ObjectMapper objectMapper;
 
@@ -180,7 +179,7 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Override
-    public List<MxLocalty> getMxLocalties(MxRegion region) {
+    public List<MxLocality> getMxLocalities(MxRegion region) {
         final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API)
                 .pathSegment("localidades", "{state}", "{region}")
                 .buildAndExpand(region.getState(), region.getId());

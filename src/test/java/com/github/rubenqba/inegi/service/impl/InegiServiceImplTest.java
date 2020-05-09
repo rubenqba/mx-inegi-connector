@@ -1,7 +1,6 @@
 package com.github.rubenqba.inegi.service.impl;
 
-import com.github.rubenqba.inegi.domain.LocaltyScope;
-import com.github.rubenqba.inegi.domain.MxLocalty;
+import com.github.rubenqba.inegi.domain.MxLocality;
 import com.github.rubenqba.inegi.domain.MxRegion;
 import com.github.rubenqba.inegi.domain.MxState;
 import com.github.rubenqba.inegi.service.InegiService;
@@ -46,15 +45,15 @@ class InegiServiceImplTest {
     void getMexicanLocalties() {
         MxRegion monterrey = new MxRegion("039", "19", "Monterrey", "0001");
 
-        final var regions = service.getMxLocalties(monterrey);
+        final var regions = service.getMxLocalities(monterrey);
         assertThat(regions).isNotEmpty();
-        assertThat(regions).extracting(MxLocalty::getId).doesNotContainNull();
-        assertThat(regions).extracting(MxLocalty::getState).doesNotContainNull().allMatch(s -> monterrey.getState().contentEquals(s));
-        assertThat(regions).extracting(MxLocalty::getRegion).doesNotContainNull().allMatch(s -> monterrey.getId().contentEquals(s));
-        assertThat(regions).extracting(MxLocalty::getName).doesNotContainNull();
-        assertThat(regions).extracting(MxLocalty::getLatitude).doesNotContainNull();
-        assertThat(regions).extracting(MxLocalty::getLongitude).doesNotContainNull();
-        assertThat(regions).extracting(MxLocalty::getAltitude).doesNotContainNull();
-        assertThat(regions).extracting(MxLocalty::getScope).doesNotContainNull().contains(URBANO, RURAL);
+        assertThat(regions).extracting(MxLocality::getId).doesNotContainNull();
+        assertThat(regions).extracting(MxLocality::getState).doesNotContainNull().allMatch(s -> monterrey.getState().contentEquals(s));
+        assertThat(regions).extracting(MxLocality::getRegion).doesNotContainNull().allMatch(s -> monterrey.getId().contentEquals(s));
+        assertThat(regions).extracting(MxLocality::getName).doesNotContainNull();
+        assertThat(regions).extracting(MxLocality::getLatitude).doesNotContainNull();
+        assertThat(regions).extracting(MxLocality::getLongitude).doesNotContainNull();
+        assertThat(regions).extracting(MxLocality::getAltitude).doesNotContainNull();
+        assertThat(regions).extracting(MxLocality::getScope).doesNotContainNull().contains(URBANO, RURAL);
     }
 }
