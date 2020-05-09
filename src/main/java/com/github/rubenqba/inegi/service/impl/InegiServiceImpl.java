@@ -47,6 +47,8 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class InegiState {
         @JsonProperty("cve_agee")
         private String cveAgee;
@@ -54,16 +56,18 @@ public class InegiServiceImpl implements InegiService {
         private String nomAgee;
         @JsonProperty("nom_abrev")
         private String nomAbrev;
-        private Long pob; // poblacion total?
-        @JsonProperty("pob_fem")
-        private Long pobFem; // poblacion femenina
-        @JsonProperty("pob_mas")
-        private Long pobMas; // poblacion masculina
-        private Long viv; // cantidad de viviendas?
+//        private Long pob; // poblacion total?
+//        @JsonProperty("pob_fem")
+//        private Long pobFem; // poblacion femenina
+//        @JsonProperty("pob_mas")
+//        private Long pobMas; // poblacion masculina
+//        private Long viv; // cantidad de viviendas?
     }
 
 
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class StatesDto {
         @JsonProperty("datos")
         private List<InegiState> datos;
@@ -98,13 +102,15 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class StateDto {
         @JsonProperty("datos")
         private InegiState state;
         private MetadatosDto metadatos;
         private Long numReg;
         private String result;
-        private String message;
+        private String mensaje;
     }
 
     @Override
@@ -148,6 +154,8 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class RegionDto {
         @JsonProperty("datos")
         private List<InegiMunicipio> datos;
@@ -234,11 +242,15 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Data
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class LocaltyDto {
         @JsonProperty("datos")
         private List<InegiLocalidad> datos;
         private MetadatosDto metadatos;
         private Long numReg;
+        private String result;
+        private String mensaje;
     }
 
     @Override
