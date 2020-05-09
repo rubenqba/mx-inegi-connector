@@ -149,8 +149,6 @@
         <version>2.5.3</version>
         <configuration>
           <tagNameFormat>v@{project.version}</tagNameFormat>
-          <goals>compile</goals>
-          <preparationGoals>compile</preparationGoals>
           <resume>false</resume>
         </configuration>
       </plugin>
