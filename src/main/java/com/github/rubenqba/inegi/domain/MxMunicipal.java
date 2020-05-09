@@ -3,7 +3,7 @@ package com.github.rubenqba.inegi.domain;
 import lombok.Value;
 
 @Value
-public class MxRegion {
+public class MxMunicipal {
     String id;
     String state;
     String name;

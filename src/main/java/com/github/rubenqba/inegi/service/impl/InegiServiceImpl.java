@@ -7,7 +7,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rubenqba.inegi.domain.LocaltyScope;
 import com.github.rubenqba.inegi.domain.MxLocality;
-import com.github.rubenqba.inegi.domain.MxRegion;
+import com.github.rubenqba.inegi.domain.MxMunicipal;
 import com.github.rubenqba.inegi.domain.MxState;
 import com.github.rubenqba.inegi.service.InegiService;
 import lombok.Data;
@@ -18,6 +18,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -26,8 +28,8 @@ public class InegiServiceImpl implements InegiService {
 
     private static final String INEGI_GEO_API = "https://gaia.inegi.org.mx/wscatgeo";
 
-    private static final Function<InegiState, MxState> stateDomainMapper = (dto) -> new MxState(dto.getCveAgee(), dto.getNomAbrev(), dto.getNomAbrev());
-    private static final Function<InegiMunicipio, MxRegion> regionDomainMapper = (dto) -> new MxRegion(dto.municipaly, dto.state, dto.name, dto.principalCity);
+    private static final Function<InegiState, MxState> stateDomainMapper = (dto) -> new MxState(dto.cveAgee, dto.nomAgee, dto.nomAbrev);
+    private static final Function<InegiMunicipio, MxMunicipal> regionDomainMapper = (dto) -> new MxMunicipal(dto.municipaly, dto.state, dto.name, dto.principalCity);
     private static final Function<InegiLocalidad, MxLocality> localtyDomainMapper = (dto) -> new MxLocality(dto.localty, dto.state, dto.municipal, dto.name, LocaltyScope.valueOf(dto.ambito), dto.latitud, dto.longitud, dto.altitud);
 
     private final ObjectMapper objectMapper;
@@ -71,7 +73,7 @@ public class InegiServiceImpl implements InegiService {
 
     @Override
     public List<MxState> getMxStates() {
-        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).path("/mgee").build();
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("mgee");
         try {
             Request request = new Request.Builder()
                     .url(uriComponents.toUriString())
@@ -87,12 +89,48 @@ public class InegiServiceImpl implements InegiService {
                 return dto.datos.stream().map(stateDomainMapper).collect(Collectors.toUnmodifiableList());
             }
         } catch (IOException ex) {
-            log.error("There was an error downloading the URL '{}' ", uriComponents.toUri());
+            log.error("There was an error downloading the URL '{}' ", uriComponents.build().toUri());
             if (log.isTraceEnabled()) {
                 log.trace(ex.getMessage(), ex.getCause());
             }
         }
         return Collections.emptyList();
+    }
+
+    @Data
+    static class StateDto {
+        @JsonProperty("datos")
+        private InegiState state;
+        private MetadatosDto metadatos;
+        private Long numReg;
+        private String result;
+        private String message;
+    }
+
+    @Override
+    public Optional<MxState> getMxState(String state) {
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("mgee", "{state}");
+        try {
+            Request request = new Request.Builder()
+                    .url(uriComponents.buildAndExpand(state).toUriString())
+                    .build();
+
+            final var result = HttpClientHolder.getHttpClient().newCall(request).execute();
+
+            if (result.isSuccessful()) {
+                final var dto = objectMapper.readValue(result.body().string(), StateDto.class);
+                if (log.isTraceEnabled()) {
+                    log.trace("received {} states from INEGI service, last updated at {} for '{}'", dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                }
+                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? Optional.of(stateDomainMapper.apply(dto.state)) : Optional.empty();
+            }
+        } catch (IOException ex) {
+            log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state).toUri());
+            if (log.isTraceEnabled()) {
+                log.trace(ex.getMessage(), ex.getCause());
+            }
+        }
+        return Optional.empty();
     }
 
     @Data
@@ -118,13 +156,11 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Override
-    public List<MxRegion> getMxRegions(MxState state) {
-        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API)
-                .pathSegment("mgem", "{state}")
-                .buildAndExpand(state.getId());
+    public List<MxMunicipal> getMxRegions(MxState state) {
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("mgem", "{state}");
         try {
             Request request = new Request.Builder()
-                    .url(uriComponents.toUriString())
+                    .url(uriComponents.buildAndExpand(state.getId()).toUriString())
                     .build();
 
             final var result = HttpClientHolder.getHttpClient().newCall(request).execute();
@@ -138,12 +174,39 @@ public class InegiServiceImpl implements InegiService {
                 return dto.datos.stream().map(regionDomainMapper).collect(Collectors.toUnmodifiableList());
             }
         } catch (IOException ex) {
-            log.error("There was an error downloading the URL '{}' ", uriComponents.toUri());
+            log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state.getId()).toUri());
             if (log.isTraceEnabled()) {
                 log.trace(ex.getMessage(), ex.getCause());
             }
         }
         return Collections.emptyList();
+    }
+
+    @Override
+    public Optional<MxMunicipal> getMxMunicipal(String state, String municipal) {
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("mgem", "{state}", "{municipal}");
+        try {
+            Request request = new Request.Builder()
+                    .url(uriComponents.buildAndExpand(state, municipal).toUriString())
+                    .build();
+
+            final var result = HttpClientHolder.getHttpClient().newCall(request).execute();
+
+            if (result.isSuccessful()) {
+                final var dto = objectMapper.readValue(result.body().string(), RegionDto.class);
+                if (log.isTraceEnabled()) {
+                    log.trace("received {} {} state's regions from INEGI service, last updated at {} for '{}'",
+                            state, dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                }
+                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? dto.datos.stream().map(regionDomainMapper).findFirst() : Optional.empty();
+            }
+        } catch (IOException ex) {
+            log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state, municipal).toUri());
+            if (log.isTraceEnabled()) {
+                log.trace(ex.getMessage(), ex.getCause());
+            }
+        }
+        return Optional.empty();
     }
 
     @Data
@@ -179,13 +242,11 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Override
-    public List<MxLocality> getMxLocalities(MxRegion region) {
-        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API)
-                .pathSegment("localidades", "{state}", "{region}")
-                .buildAndExpand(region.getState(), region.getId());
+    public List<MxLocality> getMxLocalities(MxMunicipal municipal) {
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("localidades", "{state}", "{region}");
         try {
             Request request = new Request.Builder()
-                    .url(uriComponents.toUriString())
+                    .url(uriComponents.buildAndExpand(municipal.getState(), municipal.getId()).toUriString())
                     .build();
 
             final var result = HttpClientHolder.getHttpClient().newCall(request).execute();
@@ -194,16 +255,39 @@ public class InegiServiceImpl implements InegiService {
                 final var dto = objectMapper.readValue(result.body().string(), LocaltyDto.class);
                 if (log.isTraceEnabled()) {
                     log.trace("received {} {} municipal's localties from INEGI service, last updated at {} for '{}'",
-                            region.getName(), dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                            municipal.getName(), dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
                 }
                 return dto.datos.stream().filter(InegiLocalidad::isEnabled).map(localtyDomainMapper).collect(Collectors.toUnmodifiableList());
             }
         } catch (IOException ex) {
-            log.error("There was an error downloading the URL '{}' ", uriComponents.toUri());
+            log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(municipal.getState(), municipal.getId()).toUri());
             if (log.isTraceEnabled()) {
                 log.trace(ex.getMessage(), ex.getCause());
             }
         }
         return Collections.emptyList();
+    }
+
+    @Override
+    public Optional<MxLocality> getMxLocality(String state, String municipal, String locality) {
+        final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("localidades", "{state}{region}{locality}");
+        try {
+            Request request = new Request.Builder()
+                    .url(uriComponents.buildAndExpand(state, municipal, locality).toUriString())
+                    .build();
+
+            final var result = HttpClientHolder.getHttpClient().newCall(request).execute();
+
+            if (result.isSuccessful()) {
+                final var dto = objectMapper.readValue(result.body().string(), LocaltyDto.class);
+                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? dto.datos.stream().map(localtyDomainMapper).findFirst() : Optional.empty();
+            }
+        } catch (IOException ex) {
+            log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state, municipal, locality).toUri());
+            if (log.isTraceEnabled()) {
+                log.trace(ex.getMessage(), ex.getCause());
+            }
+        }
+        return Optional.empty();
     }
 }

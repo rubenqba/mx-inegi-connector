@@ -6,7 +6,7 @@ import lombok.Value;
 public class MxLocality {
     String id;
     String state;
-    String region;
+    String municipal;
     String name;
     LocaltyScope scope;
     Double latitude;
