@@ -9,7 +9,7 @@
   </parent>
   <groupId>com.github.rubenqba</groupId>
   <artifactId>mx-inegi-connector</artifactId>
-  <version>1.0.2-SNAPSHOT</version>
+  <version>1.0.2</version>
   <name>mx-inegi-connector</name>
   <description>INEGI connector library</description>
 
@@ -78,7 +78,7 @@
     <url>https://github.com/rubenqba/${project.artifactId}.git</url>
     <connection>scm:git:git@github.com:rubenqba/${project.artifactId}.git</connection>
     <developerConnection>scm:git:git@github.com:rubenqba/${project.artifactId}.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v1.0.2</tag>
   </scm>
   
   <issueManagement>
