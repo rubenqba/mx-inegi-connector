@@ -33,7 +33,7 @@ public interface InegiService {
      * @param state requested state
      * @return immutable list of municipals or else an empty list
      */
-    List<MxMunicipal> getMxRegions(MxState state);
+    List<MxMunicipal> getMxMunicipals(MxState state);
 
     /**
      * get mexican state by id

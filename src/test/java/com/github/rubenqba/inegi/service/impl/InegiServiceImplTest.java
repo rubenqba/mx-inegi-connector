@@ -48,7 +48,7 @@ class InegiServiceImplTest {
     void getMexicanMunicipalities() {
         MxState nuevoLeonState = new MxState("19", "Nuevo Leon", "NL");
 
-        final var regions = service.getMxRegions(nuevoLeonState);
+        final var regions = service.getMxMunicipals(nuevoLeonState);
         assertThat(regions).isNotEmpty();
         assertThat(regions).extracting(MxMunicipal::getId).doesNotContainNull();
         assertThat(regions).extracting(MxMunicipal::getState).doesNotContainNull().allMatch(s -> nuevoLeonState.getId().contentEquals(s));
@@ -74,7 +74,7 @@ class InegiServiceImplTest {
 
     @Test
     void getMexicanLocalties() {
-        MxMunicipal monterrey = new MxMunicipal("039", "19", "Monterrey", "0001");
+        MxMunicipal monterrey = new MxMunicipal("015", "18", "Monterrey", "0001");
 
         final var regions = service.getMxLocalities(monterrey);
         assertThat(regions).isNotEmpty();
@@ -84,7 +84,6 @@ class InegiServiceImplTest {
         assertThat(regions).extracting(MxLocality::getName).doesNotContainNull();
         assertThat(regions).extracting(MxLocality::getLatitude).doesNotContainNull();
         assertThat(regions).extracting(MxLocality::getLongitude).doesNotContainNull();
-        assertThat(regions).extracting(MxLocality::getAltitude).doesNotContainNull();
         assertThat(regions).extracting(MxLocality::getScope).doesNotContainNull().contains(URBANO, RURAL);
     }
 
@@ -103,7 +102,6 @@ class InegiServiceImplTest {
                             assertThat(locality).extracting(MxLocality::getScope).isEqualTo(RURAL);
                             assertThat(locality).extracting(MxLocality::getLatitude).isEqualTo(19.2372167);
                             assertThat(locality).extracting(MxLocality::getLongitude).isEqualTo(-99.0569950);
-                            assertThat(locality).extracting(MxLocality::getAltitude).isEqualTo(2350.0);
                         }
                 );
     }

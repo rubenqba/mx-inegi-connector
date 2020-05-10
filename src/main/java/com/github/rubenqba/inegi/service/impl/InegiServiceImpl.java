@@ -30,7 +30,7 @@ public class InegiServiceImpl implements InegiService {
 
     private static final Function<InegiState, MxState> stateDomainMapper = (dto) -> new MxState(dto.cveAgee, dto.nomAgee, dto.nomAbrev);
     private static final Function<InegiMunicipio, MxMunicipal> regionDomainMapper = (dto) -> new MxMunicipal(dto.municipaly, dto.state, dto.name, dto.principalCity);
-    private static final Function<InegiLocalidad, MxLocality> localtyDomainMapper = (dto) -> new MxLocality(dto.localty, dto.state, dto.municipal, dto.name, LocaltyScope.valueOf(dto.ambito), dto.latitud, dto.longitud, dto.altitud);
+    private static final Function<InegiLocalidad, MxLocality> localtyDomainMapper = (dto) -> new MxLocality(dto.localty, dto.state, dto.municipal, dto.name, LocaltyScope.valueOf(dto.ambito), dto.latitud, dto.longitud);
 
     private final ObjectMapper objectMapper;
 
@@ -56,12 +56,6 @@ public class InegiServiceImpl implements InegiService {
         private String nomAgee;
         @JsonProperty("nom_abrev")
         private String nomAbrev;
-//        private Long pob; // poblacion total?
-//        @JsonProperty("pob_fem")
-//        private Long pobFem; // poblacion femenina
-//        @JsonProperty("pob_mas")
-//        private Long pobMas; // poblacion masculina
-//        private Long viv; // cantidad de viviendas?
     }
 
 
@@ -88,7 +82,7 @@ public class InegiServiceImpl implements InegiService {
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), StatesDto.class);
                 if (log.isTraceEnabled()) {
-                    log.trace("received {} states from INEGI service, last updated at {} for '{}'", dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                    log.trace("received {} states from INEGI service, last updated at {} by '{}'", dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
                 }
                 return dto.datos.stream().map(stateDomainMapper).collect(Collectors.toUnmodifiableList());
             }
@@ -125,10 +119,14 @@ public class InegiServiceImpl implements InegiService {
 
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), StateDto.class);
-                if (log.isTraceEnabled()) {
-                    log.trace("received {} states from INEGI service, last updated at {} for '{}'", dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                if (Objects.nonNull(dto.numReg) && dto.numReg == 1) {
+                    if (log.isTraceEnabled()) {
+                        log.trace("received {} states from INEGI service, last updated at {} by '{}'", dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                    }
+                    return Optional.of(stateDomainMapper.apply(dto.state));
+                } else {
+                    log.warn("state id '{}' was not found", state);
                 }
-                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? Optional.of(stateDomainMapper.apply(dto.state)) : Optional.empty();
             }
         } catch (IOException ex) {
             log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state).toUri());
@@ -164,7 +162,7 @@ public class InegiServiceImpl implements InegiService {
     }
 
     @Override
-    public List<MxMunicipal> getMxRegions(MxState state) {
+    public List<MxMunicipal> getMxMunicipals(MxState state) {
         final var uriComponents = UriComponentsBuilder.fromHttpUrl(INEGI_GEO_API).pathSegment("mgem", "{state}");
         try {
             Request request = new Request.Builder()
@@ -176,7 +174,7 @@ public class InegiServiceImpl implements InegiService {
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), RegionDto.class);
                 if (log.isTraceEnabled()) {
-                    log.trace("received {} {} state's regions from INEGI service, last updated at {} for '{}'",
+                    log.trace("received {} {} state's regions from INEGI service, last updated at {} by '{}'",
                             state.getName(), dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
                 }
                 return dto.datos.stream().map(regionDomainMapper).collect(Collectors.toUnmodifiableList());
@@ -202,13 +200,20 @@ public class InegiServiceImpl implements InegiService {
 
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), RegionDto.class);
-                if (log.isTraceEnabled()) {
-                    log.trace("received {} {} state's regions from INEGI service, last updated at {} for '{}'",
-                            state, dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                if (Objects.nonNull(dto.numReg) && dto.numReg == 1) {
+                    final var first = dto.datos.stream().map(regionDomainMapper).findFirst();
+                    first.ifPresentOrElse(mun -> {
+                        if (log.isTraceEnabled()) {
+                            log.trace("received municipal '{}' of state '{}' from INEGI service, last updated at {} by '{}'",
+                                    mun.getName(), mun.getState(), dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                        }
+                    }, () -> log.warn("municipal '{}' in state '{}', was not found", municipal, state));
+                    return first;
+                } else {
+                    log.warn("municipal id '{}' in state '{}' was not found", municipal, state);
                 }
-                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? dto.datos.stream().map(regionDomainMapper).findFirst() : Optional.empty();
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state, municipal).toUri());
             if (log.isTraceEnabled()) {
                 log.trace(ex.getMessage(), ex.getCause());
@@ -235,8 +240,6 @@ public class InegiServiceImpl implements InegiService {
         private Double longitud;
         @JsonProperty("latitud")
         private Double latitud;
-        @JsonProperty("altitud")
-        private Double altitud;
         @JsonProperty("estatus")
         private boolean enabled;
     }
@@ -266,7 +269,7 @@ public class InegiServiceImpl implements InegiService {
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), LocaltyDto.class);
                 if (log.isTraceEnabled()) {
-                    log.trace("received {} {} municipal's localties from INEGI service, last updated at {} for '{}'",
+                    log.trace("received {} {} municipal's localties from INEGI service, last updated at {} by '{}'",
                             municipal.getName(), dto.numReg, dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
                 }
                 return dto.datos.stream().filter(InegiLocalidad::isEnabled).map(localtyDomainMapper).collect(Collectors.toUnmodifiableList());
@@ -292,7 +295,18 @@ public class InegiServiceImpl implements InegiService {
 
             if (result.isSuccessful()) {
                 final var dto = objectMapper.readValue(result.body().string(), LocaltyDto.class);
-                return Objects.nonNull(dto.numReg) && dto.numReg == 1  ? dto.datos.stream().map(localtyDomainMapper).findFirst() : Optional.empty();
+                if (Objects.nonNull(dto.numReg) && dto.numReg == 1) {
+                    final var first = dto.datos.stream().map(localtyDomainMapper).findFirst();
+                    first.ifPresentOrElse(loc -> {
+                        if (log.isTraceEnabled()) {
+                            log.trace("received locality '{}' of municipal '{}' in state '{}' from INEGI service, last updated at {} by '{}'",
+                                    loc.getName(), loc.getMunicipal(), loc.getState(), dto.metadatos.fechaActualizacion, dto.metadatos.fuenteInfo);
+                        }
+                    }, () -> log.warn("locality '{}' of municipal '{}' in state '{}', was not found", locality, municipal, state));
+                    return first;
+                } else {
+                    log.warn("locality id '{}' in municipal '{}' in state '{}' was not found", locality, municipal, state);
+                }
             }
         } catch (IOException ex) {
             log.error("There was an error downloading the URL '{}' ", uriComponents.buildAndExpand(state, municipal, locality).toUri());

@@ -11,5 +11,4 @@ public class MxLocality {
     LocaltyScope scope;
     Double latitude;
     Double longitude;
-    Double altitude;
 }
